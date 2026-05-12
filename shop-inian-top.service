@@ -1,0 +1,16 @@
+[Unit]
+Description=shop.inian.top Node service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/shop.inian.top/app
+EnvironmentFile=/var/www/shop.inian.top/app/.env
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target
