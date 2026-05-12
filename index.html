@@ -442,6 +442,68 @@ a{
 
 a:hover{text-decoration:underline}
 
+.consent-modal{
+  position:fixed;
+  inset:0;
+  z-index:20;
+  display:none;
+  place-items:center;
+  padding:18px;
+  background:rgba(5,8,13,.72);
+  backdrop-filter:blur(10px);
+}
+
+.consent-modal.is-open{
+  display:grid;
+}
+
+.consent-dialog{
+  width:min(100%, 520px);
+  padding:22px;
+  border:1px solid rgba(240,107,130,.45);
+  border-radius:10px;
+  color:var(--text);
+  background:linear-gradient(155deg, var(--surface-2), var(--surface));
+  box-shadow:0 28px 80px rgba(0,0,0,.44), 0 0 0 1px rgba(255,255,255,.04);
+}
+
+.consent-title{
+  margin-bottom:12px;
+  color:#ffe08a;
+  font-size:20px;
+  font-weight:900;
+}
+
+.consent-text{
+  display:grid;
+  gap:10px;
+  color:var(--text);
+  font-size:15px;
+  line-height:1.8;
+}
+
+.consent-action{
+  width:100%;
+  min-height:48px;
+  margin-top:18px;
+  border:none;
+  border-radius:8px;
+  color:#10141d;
+  background:linear-gradient(135deg, var(--accent-2), #ffe18a);
+  font-size:16px;
+  font-weight:900;
+  cursor:pointer;
+  box-shadow:0 14px 28px rgba(242,193,92,.18);
+}
+
+.consent-action:hover{
+  filter:brightness(1.04);
+}
+
+body.modal-open{
+  overflow:hidden;
+}
+
 @media (max-width:760px){
   .shell{
     padding:16px;
@@ -487,8 +549,9 @@ a:hover{text-decoration:underline}
     </div>
 
     <div class="notice">
-      <div>如有任何问题，请及时加入我们的福利售后 QQ 群：108759405 获取帮助。</div>
+      <div>如有任何问题，请及时加入我们的福利售后 QQ 群：1087559405 获取帮助。</div>
       <div class="notice-rule">虚拟产品，激活开卡后不退，业务需自行测试，不保证成功！点开卡查询激活后默认同意此规则！</div>
+      <div class="notice-rule">进群，群主 krio 绑卡高手可以咨询，低价 GPT Plus 只需要个位数！</div>
     </div>
 
     <div class="main-grid">
@@ -536,6 +599,17 @@ a:hover{text-decoration:underline}
   </div>
 </div>
 
+<div class="consent-modal" id="activationNotice" role="dialog" aria-modal="true" aria-labelledby="activationNoticeTitle">
+  <div class="consent-dialog">
+    <div class="consent-title" id="activationNoticeTitle">开卡规则提示</div>
+    <div class="consent-text">
+      <p>开卡查询激活后，不予退款（包括绑卡失败、拒绝绑卡等情况）。</p>
+      <p>介意请勿操作，关闭窗口联系客服退款。接受则继续前往激活。</p>
+    </div>
+    <button class="consent-action" id="activationNoticeBtn" type="button">我已知悉，不再提示！</button>
+  </div>
+</div>
+
 <script>
 const countdownEl = document.getElementById("countdown");
 const cardInfoEl = document.getElementById("cardInfo");
@@ -549,16 +623,49 @@ const copyToastEl = document.getElementById("copyToast");
 const themeToggle = document.getElementById("themeToggle");
 const themeIcon = document.getElementById("themeIcon");
 const themeText = document.getElementById("themeText");
+const activationNoticeEl = document.getElementById("activationNotice");
+const activationNoticeBtn = document.getElementById("activationNoticeBtn");
 
 let autoCancelTime = null;
 let timer = null;
 let toastTimer = null;
+const activationNoticeKey = "activationNoticeAcceptedDate";
 
 function applyTheme(theme) {
   document.body.dataset.theme = theme;
   themeIcon.textContent = theme === "light" ? "日" : "夜";
   themeText.textContent = theme === "light" ? "白天" : "夜间";
   localStorage.setItem("cardTheme", theme);
+}
+
+function getTodayValue() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function showActivationNoticeIfNeeded() {
+  try {
+    if (localStorage.getItem(activationNoticeKey) === getTodayValue()) return;
+  } catch (error) {
+    // If storage is blocked, still show the rule once for this page load.
+  }
+
+  activationNoticeEl.classList.add("is-open");
+  document.body.classList.add("modal-open");
+}
+
+function acceptActivationNotice() {
+  try {
+    localStorage.setItem(activationNoticeKey, getTodayValue());
+  } catch (error) {
+    // Storage can fail in private modes; closing the modal should still work.
+  }
+
+  activationNoticeEl.classList.remove("is-open");
+  document.body.classList.remove("modal-open");
 }
 
 function setStatus(text) {
@@ -738,6 +845,7 @@ async function copyCardField(event) {
 queryBtn.addEventListener("click", queryCard);
 verifyBtn.addEventListener("click", get3DS);
 cardInfoEl.addEventListener("click", copyCardField);
+activationNoticeBtn.addEventListener("click", acceptActivationNotice);
 themeToggle.addEventListener("click", () => {
   const nextTheme = document.body.dataset.theme === "light" ? "dark" : "light";
   applyTheme(nextTheme);
@@ -749,6 +857,7 @@ cdkEl.addEventListener("keydown", (event) => {
 });
 
 applyTheme(localStorage.getItem("cardTheme") || "dark");
+showActivationNoticeIfNeeded();
 </script>
 </body>
 </html>
