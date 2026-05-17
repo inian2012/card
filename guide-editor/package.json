@@ -1,0 +1,13 @@
+{
+  "name": "guide-editor",
+  "version": "1.0.0",
+  "description": "Shared rich text guide editor",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2"
+  }
+}

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Guide 共享编辑器</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <div class="brand">Guide 共享编辑器</div>
+    <div class="sub">文章、教程、说明文档，统一写在这里。</div>
+  </div>
+  <button class="ghost" id="adminBtn">管理端</button>
+</header>
+
+<main class="layout">
+  <section class="list-pane">
+    <div class="pane-head">
+      <h1>文章标题</h1>
+      <button class="primary hidden" id="newDocBtn">新建 Word</button>
+    </div>
+    <div class="doc-list" id="docList"></div>
+  </section>
+
+  <section class="reader-pane" id="readerPane">
+    <div class="empty-state">选择一篇文章查看。进入管理端后可以新建、编辑、复制共享链接。</div>
+  </section>
+</main>
+
+<div class="modal" id="loginModal">
+  <form class="dialog" id="loginForm">
+    <h2>进入管理端</h2>
+    <p>输入访问密码后，可以添加 Word、编辑内容和设置公开权限。</p>
+    <input id="passwordInput" type="password" placeholder="访问密码" autocomplete="current-password" />
+    <button class="primary" type="submit">进入</button>
+    <button class="ghost" type="button" id="closeLogin">取消</button>
+  </form>
+</div>
+
+<div class="modal wide" id="editorModal">
+  <form class="editor-dialog" id="editorForm">
+    <div class="editor-head">
+      <input id="titleInput" class="title-input" placeholder="文章标题" />
+      <select id="visibilityInput">
+        <option value="private">个人</option>
+        <option value="public">公开</option>
+      </select>
+    </div>
+    <div id="editor"></div>
+    <div class="editor-actions">
+      <button class="danger" type="button" id="deleteDocBtn">删除</button>
+      <span class="save-state" id="saveState"></span>
+      <button class="ghost" type="button" id="closeEditor">关闭</button>
+      <button class="primary" type="submit">保存</button>
+    </div>
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
