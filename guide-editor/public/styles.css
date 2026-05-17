@@ -127,6 +127,36 @@ h1,h2{margin:0}
   max-width:100%;
 }
 
+.word-status{
+  margin:14px 0;
+  padding:10px 12px;
+  border:1px solid rgba(44,140,114,.18);
+  border-radius:8px;
+  color:var(--muted);
+  background:rgba(44,140,114,.08);
+  font-size:13px;
+}
+
+.word-viewer{
+  overflow:auto;
+  max-width:100%;
+  padding:18px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#eceff1;
+  contain:content;
+}
+
+.word-viewer .docx-wrapper{
+  background:transparent;
+  padding:0;
+}
+
+.word-viewer .docx{
+  margin:0 auto 18px;
+  box-shadow:0 12px 30px rgba(24,32,42,.14);
+}
+
 .empty-state,.locked{
   display:grid;
   min-height:420px;

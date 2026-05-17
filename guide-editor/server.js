@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const dotenv = require("dotenv");
+const multer = require("multer");
 
 dotenv.config();
 
@@ -12,13 +13,29 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "110578";
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
 const DATA_DIR = path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "docs.json");
+const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 const PUBLIC_DIR = path.join(__dirname, "public");
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "30mb" }));
 app.use(express.static(PUBLIC_DIR));
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: UPLOAD_DIR,
+    filename: (req, file, callback) => {
+      callback(null, `${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`);
+    }
+  }),
+  limits: { fileSize: 80 * 1024 * 1024 },
+  fileFilter: (req, file, callback) => {
+    const isDocx = path.extname(file.originalname).toLowerCase() === ".docx";
+    callback(isDocx ? null : new Error("只支持 .docx 文件"), isDocx);
+  }
+});
 
 function createToken() {
   return crypto
@@ -75,6 +92,7 @@ function publicDoc(doc) {
   return {
     id: doc.id,
     title: doc.title,
+    type: doc.type || "rich",
     visibility: doc.visibility,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt
@@ -83,6 +101,12 @@ function publicDoc(doc) {
 
 function findDoc(id) {
   return loadDocs().find((doc) => doc.id === id);
+}
+
+function removeUpload(fileUrl) {
+  if (!fileUrl || !fileUrl.startsWith("/uploads/")) return;
+  const filename = path.basename(fileUrl);
+  fs.promises.unlink(path.join(UPLOAD_DIR, filename)).catch(() => {});
 }
 
 app.get("/health", (req, res) => {
@@ -123,9 +147,22 @@ app.get("/api/docs/:id", (req, res) => {
   const doc = findDoc(req.params.id);
   if (!doc) return res.status(404).json({ success: false, message: "文章不存在" });
   if (doc.visibility !== "public") {
-    return res.json({ success: true, locked: true, title: doc.title, message: "作者没公开" });
+    return res.json({ success: true, locked: true, title: "未公开文章", message: "作者没公开" });
   }
   return res.json({ success: true, doc });
+});
+
+app.get("/api/docs/:id/file", (req, res) => {
+  const doc = findDoc(req.params.id);
+  if (!doc || doc.type !== "word" || !doc.fileUrl) {
+    return res.status(404).json({ success: false, message: "Word 文件不存在" });
+  }
+  if (doc.visibility !== "public" && !isAdminRequest(req)) {
+    return res.status(403).json({ success: false, message: "作者没公开" });
+  }
+
+  const filePath = path.join(UPLOAD_DIR, path.basename(doc.fileUrl));
+  return res.sendFile(filePath);
 });
 
 app.get("/api/admin/docs/:id", requireAdmin, (req, res) => {
@@ -141,6 +178,7 @@ app.post("/api/admin/docs", requireAdmin, (req, res) => {
   const doc = {
     id: crypto.randomUUID(),
     title,
+    type: "rich",
     visibility: req.body.visibility === "public" ? "public" : "private",
     content: req.body.content || "",
     createdAt: now,
@@ -160,16 +198,65 @@ app.put("/api/admin/docs/:id", requireAdmin, (req, res) => {
     ...docs[index],
     title: String(req.body.title || docs[index].title).trim() || docs[index].title,
     visibility: req.body.visibility === "public" ? "public" : "private",
-    content: String(req.body.content || ""),
+    content: docs[index].type === "word" ? docs[index].content || "" : String(req.body.content || ""),
     updatedAt: new Date().toISOString()
   };
   saveDocs(docs);
   res.json({ success: true, doc: docs[index] });
 });
 
+app.post("/api/admin/import-word", requireAdmin, upload.single("word"), (req, res) => {
+  if (!req.file) return res.status(400).json({ success: false, message: "请选择 .docx 文件" });
+
+  const docs = loadDocs();
+  const now = new Date().toISOString();
+  const incomingTitle = String(req.body.title || "").trim();
+  const filenameTitle = Buffer.from(req.file.originalname, "latin1")
+    .toString("utf8")
+    .replace(/\.docx$/i, "");
+  const title = incomingTitle || filenameTitle || "未命名 Word";
+  const fileUrl = `/uploads/${req.file.filename}`;
+  const visibility = req.body.visibility === "public" ? "public" : "private";
+  const replaceId = String(req.body.docId || "");
+  const index = replaceId ? docs.findIndex((doc) => doc.id === replaceId) : -1;
+
+  if (index >= 0) {
+    removeUpload(docs[index].fileUrl);
+    docs[index] = {
+      ...docs[index],
+      title,
+      type: "word",
+      visibility,
+      content: "",
+      fileUrl,
+      originalName: req.file.originalname,
+      updatedAt: now
+    };
+    saveDocs(docs);
+    return res.json({ success: true, doc: docs[index] });
+  }
+
+  const doc = {
+    id: crypto.randomUUID(),
+    title,
+    type: "word",
+    visibility,
+    content: "",
+    fileUrl,
+    originalName: req.file.originalname,
+    createdAt: now,
+    updatedAt: now
+  };
+  docs.unshift(doc);
+  saveDocs(docs);
+  return res.json({ success: true, doc });
+});
+
 app.delete("/api/admin/docs/:id", requireAdmin, (req, res) => {
   const docs = loadDocs();
-  saveDocs(docs.filter((doc) => doc.id !== req.params.id));
+  const doc = docs.find((item) => item.id === req.params.id);
+  removeUpload(doc?.fileUrl);
+  saveDocs(docs.filter((item) => item.id !== req.params.id));
   res.json({ success: true });
 });
 
