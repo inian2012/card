@@ -1,11 +1,11 @@
 [Unit]
-Description=shop.inian.top Node service
+Description=shop.inian.one Node service
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/var/www/shop.inian.top/app
-EnvironmentFile=/var/www/shop.inian.top/app/.env
+WorkingDirectory=/var/www/shop.inian.one/app
+EnvironmentFile=/var/www/shop.inian.one/app/.env
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=5
