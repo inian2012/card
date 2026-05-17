@@ -51,6 +51,10 @@ function requireAdmin(req, res, next) {
   return res.status(401).json({ success: false, message: "需要管理权限" });
 }
 
+function isAdminRequest(req) {
+  return parseCookies(req).guide_auth === createToken();
+}
+
 function loadDocs() {
   if (!fs.existsSync(DATA_FILE)) return [];
   try {
@@ -106,12 +110,13 @@ app.post("/api/logout", (req, res) => {
 });
 
 app.get("/api/me", (req, res) => {
-  const token = parseCookies(req).guide_auth;
-  res.json({ success: true, authed: token === createToken() });
+  res.json({ success: true, authed: isAdminRequest(req) });
 });
 
 app.get("/api/docs", (req, res) => {
-  res.json({ success: true, docs: loadDocs().map(publicDoc) });
+  const docs = loadDocs();
+  const visibleDocs = isAdminRequest(req) ? docs : docs.filter((doc) => doc.visibility === "public");
+  res.json({ success: true, docs: visibleDocs.map(publicDoc) });
 });
 
 app.get("/api/docs/:id", (req, res) => {

@@ -28,6 +28,8 @@ const visibilityInput = document.getElementById("visibilityInput");
 const closeEditor = document.getElementById("closeEditor");
 const deleteDocBtn = document.getElementById("deleteDocBtn");
 const saveState = document.getElementById("saveState");
+const importDocBtn = document.getElementById("importDocBtn");
+const wordFileInput = document.getElementById("wordFileInput");
 
 const toolbarOptions = [
   [{ font: Font.whitelist }, { size: SizeStyle.whitelist }],
@@ -66,7 +68,7 @@ async function copy(text) {
 
 function renderDocs() {
   if (!state.docs.length) {
-    docList.innerHTML = '<div class="empty-state">还没有文章。</div>';
+    docList.innerHTML = `<div class="empty-state">${state.authed ? "还没有文章。" : "还没有公开文章。"}</div>`;
     return;
   }
 
@@ -173,6 +175,7 @@ function openEditor(doc = null) {
 
 async function saveEditor(event) {
   event.preventDefault();
+  saveState.textContent = "保存中...";
   const payload = {
     title: titleInput.value.trim() || "未命名文章",
     visibility: visibilityInput.value,
@@ -187,6 +190,38 @@ async function saveEditor(event) {
   saveState.textContent = "已保存";
   await loadDocs();
   renderArticle(data.doc);
+  editorModal.classList.remove("open");
+}
+
+async function importWordFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    if (!file.name.toLowerCase().endsWith(".docx")) {
+      alert("目前支持导入 .docx 格式，请先把 Word 另存为 .docx 后再上传。");
+      return;
+    }
+    if (!window.mammoth) {
+      alert("Word 导入组件加载失败，请刷新页面后再试。");
+      return;
+    }
+
+    saveState.textContent = "正在导入 Word...";
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await window.mammoth.convertToHtml({ arrayBuffer });
+    ensureEditor().clipboard.dangerouslyPasteHTML(result.value || "<p></p>");
+    if (!titleInput.value.trim()) {
+      titleInput.value = file.name.replace(/\.docx$/i, "");
+    }
+    saveState.textContent = "Word 已导入，确认内容后点保存";
+  } catch (error) {
+    console.error(error);
+    alert("Word 导入失败，请确认文件没有损坏。");
+    saveState.textContent = "导入失败";
+  } finally {
+    wordFileInput.value = "";
+  }
 }
 
 async function deleteCurrentDoc() {
@@ -220,6 +255,8 @@ closeLogin.addEventListener("click", () => loginModal.classList.remove("open"));
 newDocBtn.addEventListener("click", () => openEditor());
 closeEditor.addEventListener("click", () => editorModal.classList.remove("open"));
 deleteDocBtn.addEventListener("click", deleteCurrentDoc);
+importDocBtn.addEventListener("click", () => wordFileInput.click());
+wordFileInput.addEventListener("change", importWordFile);
 editorForm.addEventListener("submit", saveEditor);
 
 loginForm.addEventListener("submit", async (event) => {

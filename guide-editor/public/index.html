@@ -52,6 +52,8 @@
     <div id="editor"></div>
     <div class="editor-actions">
       <button class="danger" type="button" id="deleteDocBtn">删除</button>
+      <button class="ghost" type="button" id="importDocBtn">导入 Word(.docx)</button>
+      <input class="hidden" id="wordFileInput" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
       <span class="save-state" id="saveState"></span>
       <button class="ghost" type="button" id="closeEditor">关闭</button>
       <button class="primary" type="submit">保存</button>
@@ -60,6 +62,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>
