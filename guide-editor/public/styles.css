@@ -107,6 +107,37 @@ h1,h2{margin:0}
   padding:26px;
 }
 
+.share-view .topbar{
+  display:none;
+}
+
+.share-view .layout{
+  display:block;
+  width:min(100%,1320px);
+  margin:0 auto;
+  padding:16px;
+}
+
+.share-view .list-pane{
+  display:none;
+}
+
+.share-view .reader-pane{
+  min-height:calc(100vh - 32px);
+  padding:24px;
+}
+
+.share-view .word-viewer{
+  padding:10px;
+  border:0;
+  border-radius:0;
+  background:#e8ebef;
+}
+
+.share-view .word-status{
+  margin:0 0 10px;
+}
+
 .article-title{
   margin-bottom:8px;
   font-size:30px;

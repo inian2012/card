@@ -312,6 +312,10 @@ async function refreshAuth() {
   adminBtn.textContent = state.authed ? "管理中" : "管理端";
 }
 
+function enterShareView() {
+  document.body.classList.add("share-view");
+}
+
 docList.addEventListener("click", (event) => {
   const card = event.target.closest(".doc-card");
   if (card) openDoc(card.dataset.id);
@@ -342,7 +346,11 @@ loginForm.addEventListener("submit", async (event) => {
 
 (async function init() {
   await refreshAuth();
-  await loadDocs();
   const match = location.pathname.match(/^\/doc\/([^/]+)/);
-  if (match) openDoc(match[1]);
+  if (match) {
+    enterShareView();
+    await openDoc(match[1]);
+    return;
+  }
+  await loadDocs();
 })();
