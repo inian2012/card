@@ -72,10 +72,39 @@ async function copy(text) {
 }
 
 function openLinksInNewTab(container) {
+  Array.from(container.querySelectorAll("a[href]")).forEach((link) => {
+    splitOverlongLink(link);
+  });
+
   container.querySelectorAll("a[href]").forEach((link) => {
     link.target = "_blank";
     link.rel = "noopener noreferrer";
   });
+}
+
+function splitOverlongLink(link) {
+  const text = link.textContent || "";
+  const match = text.match(/https?:\/\/[^\s]+/i);
+  if (!match) return;
+
+  const url = match[0];
+  const before = text.slice(0, match.index);
+  const after = text.slice(match.index + url.length);
+  if (!before && !after) {
+    link.href = url;
+    link.textContent = url;
+    return;
+  }
+
+  const cleanLink = link.cloneNode(false);
+  cleanLink.href = url;
+  cleanLink.textContent = url;
+
+  const fragment = document.createDocumentFragment();
+  if (before) fragment.append(document.createTextNode(before));
+  fragment.append(cleanLink);
+  if (after) fragment.append(document.createTextNode(after));
+  link.replaceWith(fragment);
 }
 
 function renderDocs() {
@@ -318,7 +347,7 @@ async function refreshAuth() {
   const data = await api("/api/me");
   state.authed = data.authed;
   newDocBtn.classList.toggle("hidden", !state.authed);
-  adminBtn.textContent = state.authed ? "管理中" : "管理端";
+  adminBtn.classList.toggle("hidden", state.authed);
 }
 
 function enterShareView() {
@@ -343,7 +372,9 @@ adminBtn.addEventListener("click", () => {
   passwordInput.focus();
 });
 
-closeLogin.addEventListener("click", () => loginModal.classList.remove("open"));
+closeLogin.addEventListener("click", () => {
+  loginModal.classList.remove("open");
+});
 newDocBtn.addEventListener("click", () => openEditor());
 closeEditor.addEventListener("click", () => editorModal.classList.remove("open"));
 deleteDocBtn.addEventListener("click", deleteCurrentDoc);
