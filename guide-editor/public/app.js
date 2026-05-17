@@ -71,6 +71,13 @@ async function copy(text) {
   await navigator.clipboard.writeText(text);
 }
 
+function openLinksInNewTab(container) {
+  container.querySelectorAll("a[href]").forEach((link) => {
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+  });
+}
+
 function renderDocs() {
   if (!state.docs.length) {
     docList.innerHTML = `<div class="empty-state">${state.authed ? "还没有文章。" : "还没有公开文章。"}</div>`;
@@ -148,6 +155,7 @@ function renderArticle(doc, locked = false) {
     await copy(shareUrl(doc));
     document.getElementById("copyLinkBtn").textContent = "已复制";
   });
+  openLinksInNewTab(readerPane);
 }
 
 async function renderWordDocument(doc) {
@@ -175,6 +183,7 @@ async function renderWordDocument(doc) {
       renderFooters: true,
       renderFootnotes: true
     });
+    openLinksInNewTab(viewerEl);
     statusEl.textContent = "Word 已加载，复杂样式以预览模式显示";
   } catch (error) {
     console.error(error);
@@ -319,6 +328,13 @@ function enterShareView() {
 docList.addEventListener("click", (event) => {
   const card = event.target.closest(".doc-card");
   if (card) openDoc(card.dataset.id);
+});
+
+readerPane.addEventListener("click", (event) => {
+  const link = event.target.closest("a[href]");
+  if (!link) return;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
 });
 
 adminBtn.addEventListener("click", () => {
