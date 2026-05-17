@@ -59,8 +59,12 @@ function formatTime(value) {
   return value ? new Date(value).toLocaleString("zh-CN", { hour12: false }) : "";
 }
 
-function shareUrl(id) {
-  return `${location.origin}/doc/${id}`;
+function docLinkId(doc) {
+  return doc.shareCode || doc.id;
+}
+
+function shareUrl(doc) {
+  return `${location.origin}/doc/${docLinkId(doc)}`;
 }
 
 async function copy(text) {
@@ -74,7 +78,7 @@ function renderDocs() {
   }
 
   docList.innerHTML = state.docs.map((doc) => `
-    <div class="doc-card" data-id="${doc.id}">
+    <div class="doc-card" data-id="${docLinkId(doc)}">
       <div class="doc-title">${escapeHtml(doc.title)}</div>
       <div class="doc-meta">
         <span>${doc.visibility === "public" ? "公开" : "个人"}</span>
@@ -119,7 +123,7 @@ function renderArticle(doc, locked = false) {
 
     document.getElementById("editBtn")?.addEventListener("click", () => openEditor(doc));
     document.getElementById("copyLinkBtn")?.addEventListener("click", async () => {
-      await copy(shareUrl(doc.id));
+      await copy(shareUrl(doc));
       document.getElementById("copyLinkBtn").textContent = "已复制";
     });
     renderWordDocument(doc);
@@ -141,7 +145,7 @@ function renderArticle(doc, locked = false) {
 
   document.getElementById("editBtn")?.addEventListener("click", () => openEditor(doc));
   document.getElementById("copyLinkBtn")?.addEventListener("click", async () => {
-    await copy(shareUrl(doc.id));
+    await copy(shareUrl(doc));
     document.getElementById("copyLinkBtn").textContent = "已复制";
   });
 }
@@ -156,7 +160,7 @@ async function renderWordDocument(doc) {
     if (!window.docx || !window.JSZip) {
       throw new Error("Word 渲染组件加载失败");
     }
-    const res = await fetch(`/api/docs/${doc.id}/file`);
+    const res = await fetch(`/api/docs/${docLinkId(doc)}/file`);
     if (!res.ok) throw new Error("Word 文件加载失败");
     const buffer = await res.arrayBuffer();
     if (renderId !== state.renderId) return;

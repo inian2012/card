@@ -72,11 +72,55 @@ function isAdminRequest(req) {
   return parseCookies(req).guide_auth === createToken();
 }
 
+const SHARE_CODE_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+function randomShareCode() {
+  return Array.from({ length: 3 }, () => SHARE_CODE_CHARS[crypto.randomInt(SHARE_CODE_CHARS.length)]).join("");
+}
+
+function normaliseShareCodes(docs) {
+  let changed = false;
+  const used = new Set();
+
+  for (const doc of docs) {
+    if (!/^[a-z0-9]{3}$/.test(String(doc.shareCode || "")) || used.has(doc.shareCode)) {
+      delete doc.shareCode;
+      changed = true;
+      continue;
+    }
+    used.add(doc.shareCode);
+  }
+
+  const missingDocs = docs
+    .filter((doc) => !doc.shareCode)
+    .sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || "")));
+
+  for (const doc of missingDocs) {
+    let code = randomShareCode();
+    while (used.has(code)) code = randomShareCode();
+    doc.shareCode = code;
+    used.add(doc.shareCode);
+    changed = true;
+  }
+
+  return changed;
+}
+
+function nextShareCode(docs) {
+  normaliseShareCodes(docs);
+  const used = new Set(docs.map((doc) => doc.shareCode).filter(Boolean));
+  let code = randomShareCode();
+  while (used.has(code)) code = randomShareCode();
+  return code;
+}
+
 function loadDocs() {
   if (!fs.existsSync(DATA_FILE)) return [];
   try {
     const parsed = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    if (normaliseShareCodes(parsed)) saveDocs(parsed);
+    return parsed;
   } catch (error) {
     return [];
   }
@@ -91,6 +135,7 @@ function saveDocs(docs) {
 function publicDoc(doc) {
   return {
     id: doc.id,
+    shareCode: doc.shareCode,
     title: doc.title,
     type: doc.type || "rich",
     visibility: doc.visibility,
@@ -100,7 +145,11 @@ function publicDoc(doc) {
 }
 
 function findDoc(id) {
-  return loadDocs().find((doc) => doc.id === id);
+  return loadDocs().find((doc) => doc.id === id || doc.shareCode === id);
+}
+
+function findDocIndex(docs, id) {
+  return docs.findIndex((doc) => doc.id === id || doc.shareCode === id);
 }
 
 function removeUpload(fileUrl) {
@@ -177,6 +226,7 @@ app.post("/api/admin/docs", requireAdmin, (req, res) => {
   const docs = loadDocs();
   const doc = {
     id: crypto.randomUUID(),
+    shareCode: nextShareCode(docs),
     title,
     type: "rich",
     visibility: req.body.visibility === "public" ? "public" : "private",
@@ -191,7 +241,7 @@ app.post("/api/admin/docs", requireAdmin, (req, res) => {
 
 app.put("/api/admin/docs/:id", requireAdmin, (req, res) => {
   const docs = loadDocs();
-  const index = docs.findIndex((doc) => doc.id === req.params.id);
+  const index = findDocIndex(docs, req.params.id);
   if (index === -1) return res.status(404).json({ success: false, message: "文章不存在" });
 
   docs[index] = {
@@ -218,7 +268,7 @@ app.post("/api/admin/import-word", requireAdmin, upload.single("word"), (req, re
   const fileUrl = `/uploads/${req.file.filename}`;
   const visibility = req.body.visibility === "public" ? "public" : "private";
   const replaceId = String(req.body.docId || "");
-  const index = replaceId ? docs.findIndex((doc) => doc.id === replaceId) : -1;
+  const index = replaceId ? findDocIndex(docs, replaceId) : -1;
 
   if (index >= 0) {
     removeUpload(docs[index].fileUrl);
@@ -238,6 +288,7 @@ app.post("/api/admin/import-word", requireAdmin, upload.single("word"), (req, re
 
   const doc = {
     id: crypto.randomUUID(),
+    shareCode: nextShareCode(docs),
     title,
     type: "word",
     visibility,
@@ -254,9 +305,9 @@ app.post("/api/admin/import-word", requireAdmin, upload.single("word"), (req, re
 
 app.delete("/api/admin/docs/:id", requireAdmin, (req, res) => {
   const docs = loadDocs();
-  const doc = docs.find((item) => item.id === req.params.id);
+  const doc = docs.find((item) => item.id === req.params.id || item.shareCode === req.params.id);
   removeUpload(doc?.fileUrl);
-  saveDocs(docs.filter((item) => item.id !== req.params.id));
+  saveDocs(docs.filter((item) => item.id !== req.params.id && item.shareCode !== req.params.id));
   res.json({ success: true });
 });
 
